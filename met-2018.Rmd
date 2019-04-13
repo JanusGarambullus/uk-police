@@ -1,0 +1,117 @@
+---
+title: "Metropolitan Police"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+# Load Data
+
+```{r}
+data_jan <- read_csv("Data/metropolitan-2018/2018-01/2018-01-metropolitan-street.csv")
+outcome_jan <- read_csv("Data/metropolitan-2018/2018-01/2018-01-metropolitan-outcomes.csv")
+```
+
+```{r}
+data_jan <- data_jan %>% rename(crime_id = `Crime ID`, 
+                    long = Longitude,
+                    lat = Latitude,
+                    location = Location,
+                    borough = `LSOA name`,
+                    crime_type = `Crime type`,
+                    outcome = `Last outcome category`) %>%
+             select(crime_id, long, lat, location, borough, crime_type, outcome)
+
+```
+
+# EDA
+
+```{r}
+data_jan %>% 
+  group_by(crime_type) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) %>%
+  ggplot(aes(x = fct_reorder(crime_type, n), y = n)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    xlab("") +
+    ylab("Count") +
+    ggtitle("Crime Types")
+```
+
+```{r}
+data_jan <- data_jan %>% 
+  mutate(borough = str_replace(borough, " [0-9].*", ""))
+```
+
+Which boroughs have the most crime?
+
+```{r}
+data_jan %>% 
+  group_by(borough) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n))
+```
+
+```{r}
+data_jan %>%
+  filter(borough == "Newham") %>%
+  group_by(crime_type) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n))
+```
+
+```{r}
+data_jan %>% 
+  group_by(outcome) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n))
+```
+
+```{r}
+data_outcome <- data_jan %>% 
+  mutate(outcome = case_when(
+                    outcome == "Status update unavailable" ~ "Unresolved",
+                    outcome == "Investigation complete; no suspect identified" ~ "Unresolved",
+                    outcome == NA ~ "Unresolved",
+                    TRUE ~ "Resolved"
+  ))
+```
+
+```{r}
+data_outcome %>% 
+  group_by(outcome) %>% 
+  summarise(n = n()) %>%
+  arrange(desc(n)) %>%
+  mutate(percent = n / sum(n) * 100)
+```
+
+```{r}
+data_outcome %>%
+  group_by(crime_type, outcome) %>%
+  summarise(n = n()) %>%
+  group_by(crime_type) %>%
+  mutate(sum = sum(n)) %>%
+  ungroup() %>%
+  mutate(percent = n / sum * 100) %>%
+  filter(outcome == "Resolved") %>%
+  arrange(desc(percent))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
